@@ -20,9 +20,11 @@ export default function GameBoard({ board, players, activePlayerIndex, onTileCli
     if (!tile.revealed) classes.push('tile-hidden')
     else classes.push(`tile-${tile.type}`)
 
-    // Check if within move range (dist <= 2)
-    const dist = Math.abs(tile.row - curR) + Math.abs(tile.col - curC)
-    if (dist > 0 && dist <= 2 && activePlayer?.actionsLeft > 0) {
+    // Check if within move range: 1 step around player (adjacent)
+    const dRow = Math.abs(tile.row - curR)
+    const dCol = Math.abs(tile.col - curC)
+    const isAdjacent = (dRow <= 1 && dCol <= 1) && (dRow + dCol > 0)
+    if (isAdjacent && activePlayer?.actionsLeft > 0 && activePlayer?.status === 'alive') {
       classes.push('tile-reachable')
     }
 
@@ -38,7 +40,7 @@ export default function GameBoard({ board, players, activePlayerIndex, onTileCli
       <div className="board-header">
         <div className="board-title">
           <span className="code-tag">&lt;LogicBoard_7x7 /&gt;</span>
-          <span className="board-subtitle">คลิกช่องที่มีกรอบเขียวเพื่อเดิน (ใช้ 1 Action)</span>
+          <span className="board-subtitle">คลิกช่องรอบตัวที่มีกรอบเขียวเพื่อเดินทีละก้าว (1 Action ต่อก้าว)</span>
         </div>
         <div className="board-coords">
           ตำแหน่งปัจจุบัน: <code>[{curR}, {curC}]</code>

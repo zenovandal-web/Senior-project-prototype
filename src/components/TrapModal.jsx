@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { validateTrapCode } from '../game/codeValidator'
 
 // Trap code challenges: broken code + solution for each trap type
 const TRAP_CHALLENGES = {
@@ -55,36 +56,28 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
   const isExpert = player.id === trap.favored
   const isSemi = Array.isArray(trap.semiFavored) ? trap.semiFavored.includes(player.id) : trap.semiFavored === player.id
 
-  function normalize(str) {
-    return str
-      .replace(/\/\/.*/g, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-  }
-
-  function checkAnswer() {
-    const userNorm = normalize(userCode)
-    const { keyTokens } = challenge
-    if (!keyTokens.length) return userNorm.length >= 3
-    const matched = keyTokens.filter(t => userNorm.includes(t.toLowerCase()))
-    return matched.length >= Math.ceil(keyTokens.length * 0.6)
-  }
-
   function handleSubmit() {
-    if (!userCode.trim() || result === 'correct') return
-    const correct = checkAnswer()
-    setAttempts(a => a + 1)
+    if (!userCode.trim() || result === 'correct' || result === 'fatal') return
+    const correct = validateTrapCode(trap.id, userCode, challenge.solution)
 
     if (correct) {
       setResult('correct')
       setTimeout(() => onResolveTrap('code_correct'), 1200)
     } else {
-      setResult('wrong')
-      setShake(true)
-      setTimeout(() => { setShake(false); setResult(null) }, 900)
-      setTimeout(() => onResolveTrap('code_wrong'), 950)
+      const nextAttempts = attempts + 1
+      setAttempts(nextAttempts)
+
+      if (nextAttempts >= 3) {
+        setResult('fatal')
+        setShake(true)
+        setTimeout(() => setShake(false), 800)
+        setTimeout(() => onResolveTrap('code_fatal'), 1500)
+      } else {
+        setResult('wrong')
+        setShake(true)
+        setTimeout(() => { setShake(false); setResult(null) }, 900)
+        setTimeout(() => onResolveTrap('code_wrong'), 950)
+      }
     }
   }
 
@@ -153,7 +146,7 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
           {/* RIGHT — editor */}
           <div className="code-challenge-right">
             <div className="code-challenge-label">🟢 พิมพ์โค้ดแก้ไขที่นี่ (fix_trap.c)</div>
-            <div className={`code-editor-wrapper ${result === 'correct' ? 'editor-correct' : result === 'wrong' ? 'editor-wrong' : ''}`}>
+            <div className={`code-editor-wrapper ${result === 'correct' ? 'editor-correct' : (result === 'wrong' || result === 'fatal') ? 'editor-wrong' : ''}`}>
               <div className="code-editor-topbar">
                 <span className="dot red" /><span className="dot yellow" /><span className="dot green" />
                 <span className="code-title">fix_trap.c · Ctrl+Enter = Submit</span>
@@ -168,7 +161,7 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
                   ref={textareaRef}
                   className="code-textarea"
                   value={userCode}
-                  onChange={e => { setUserCode(e.target.value); setResult(null) }}
+                  onChange={e => { if (result !== 'fatal') { setUserCode(e.target.value); setResult(null); } }}
                   onKeyDown={handleKeyDown}
                   placeholder={challenge.placeholder}
                   spellCheck={false}
@@ -176,6 +169,7 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
                   autoCorrect="off"
                   autoCapitalize="off"
                   rows={9}
+                  disabled={result === 'fatal'}
                 />
               </div>
             </div>
@@ -184,18 +178,21 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
               <div className="result-banner result-correct">✅ แก้ไขสำเร็จ! หลุดออกจากกับดักแล้ว!</div>
             )}
             {result === 'wrong' && (
-              <div className="result-banner result-wrong">❌ โค้ดยังผิดอยู่ — โดนบทลงโทษ!</div>
+              <div className="result-banner result-wrong">❌ โค้ดยังผิดอยู่ (ครั้งที่ {attempts}/3) — ระวังหากผิดครบ 3 ครั้งจะเกิด System Crash!</div>
+            )}
+            {result === 'fatal' && (
+              <div className="result-banner result-fatal">💀 แก้โค้ดผิดครบ 3 ครั้ง! SYSTEM CRASH! {player.name} ดับลง...</div>
             )}
 
             <div className="attempts-tracker">
-              พยายามแล้ว: <span className={attempts >= 3 ? 'red-text' : 'yellow-text'}>{attempts} ครั้ง</span>
-              {attempts >= 2 && <span style={{ marginLeft: '8px', color: 'var(--accent-cyan)' }}>← กด Hint ได้เลย!</span>}
+              พิมพ์ผิดแล้ว: <span className={attempts >= 2 ? 'red-text' : 'yellow-text'}>{attempts} / 3 ครั้ง</span>
+              {attempts >= 2 && <span style={{ marginLeft: '8px', color: 'var(--accent-cyan)' }}>← กด Hint ได้เลย! หากผิดอีก 1 ครั้งจะ System Crash</span>}
             </div>
 
             <button
               className="btn btn-submit-code"
               onClick={handleSubmit}
-              disabled={!userCode.trim() || result === 'correct'}
+              disabled={!userCode.trim() || result === 'correct' || result === 'fatal'}
             >
               <span>⚡</span>
               <div>

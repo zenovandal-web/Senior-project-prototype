@@ -27,17 +27,16 @@ function shuffle(array) {
 // Generate the 7x7 board tiles
 export function generateBoard() {
   // Total 49 tiles (7x7)
-  // Center is [3, 3] = CPU Core (Boss Lair)
-  // Edge [6, 6] = Boot Sector (Spawn)
-  // Remaining 47 tiles:
-  // - 16 Logic Gate (normal)
+  // Center is [3, 3] = The Boot Sector (Spawn)
+  // Remaining 48 tiles:
+  // - 17 Logic Gate (normal)
   // - 9 Traps (3 infinite_loop, 3 logic_bomb, 3 voltage_spike)
   // - 7 Loot rooms (4 open_source, 3 cache_memory)
-  // - 10 Goblin spawns (5 unstable_code, 5 bug_nest)
-  // - 5 Gateway / Mini Boss rooms
+  // - 9 Goblin spawns (5 unstable_code, 4 bug_nest)
+  // - 6 Gateway / Mini Boss rooms (Clear 4 to spawn boss portal)
   const pool = []
 
-  for (let i = 0; i < 16; i++) pool.push({ type: 'normal', name: 'Logic Gate', desc: 'ทางเดินปกติ ไม่มี Event พิเศษ' })
+  for (let i = 0; i < 17; i++) pool.push({ type: 'normal', name: 'Logic Gate', desc: 'ทางเดินปกติ ไม่มี Event พิเศษ' })
   
   for (let i = 0; i < 3; i++) pool.push({ type: 'trap', trapType: 'infinite_loop', name: 'Infinite Loop Pit', desc: 'กับดักความเร็ว (Agility 5+)' })
   for (let i = 0; i < 3; i++) pool.push({ type: 'trap', trapType: 'logic_bomb', name: 'Logic Bomb Step', desc: 'กับดักสติปัญญา (Intellect 6+)' })
@@ -47,9 +46,9 @@ export function generateBoard() {
   for (let i = 0; i < 3; i++) pool.push({ type: 'loot', lootType: 'cache_memory', name: 'Cache Memory', desc: 'เร่งความเร็ว จั่ว Header Spell' })
 
   for (let i = 0; i < 5; i++) pool.push({ type: 'goblin', name: 'Unstable Code Block', desc: 'ห้องที่เต็มไปด้วยบั๊ก' })
-  for (let i = 0; i < 5; i++) pool.push({ type: 'goblin', name: 'Bug Nest (Debug Log)', desc: 'รังรวมบั๊ก' })
+  for (let i = 0; i < 4; i++) pool.push({ type: 'goblin', name: 'Bug Nest (Debug Log)', desc: 'รังรวมบั๊ก' })
 
-  for (let i = 0; i < 5; i++) pool.push({ type: 'miniboss', name: 'Gateway to Kernel', desc: 'มินิบอสเฝ้า Permission Key' })
+  for (let i = 0; i < 6; i++) pool.push({ type: 'miniboss', name: 'Gateway to Kernel', desc: 'มินิบอสเฝ้า Permission Key' })
 
   const shuffledPool = shuffle(pool)
   let poolIdx = 0
@@ -59,26 +58,13 @@ export function generateBoard() {
     const row = []
     for (let c = 0; c < 7; c++) {
       if (r === 3 && c === 3) {
-        // Center Boss Room
-        row.push({
-          row: r,
-          col: c,
-          type: 'boss',
-          name: 'The Central Processing Unit (CPU Core)',
-          desc: 'ห้องบอสใหญ่ตรงกลาง ต้องใช้ Permission Key เพื่อปลดล็อค',
-          revealed: false,
-          visited: false,
-          enemy: null,
-          looted: false,
-        })
-      } else if (r === 6 && c === 6) {
-        // Boot Sector (Entrance/Spawn)
+        // Center Boot Sector (Spawn)
         row.push({
           row: r,
           col: c,
           type: 'entrance',
           name: 'The Boot Sector (0x0000)',
-          desc: 'จุดเริ่มต้นที่ทุกคน Spawn ฟื้นฟู HP/Focus เต็มเมื่อ Re-compile',
+          desc: 'จุดเกิดตรงกลางแผนที่ ฟื้นฟู HP/Focus เต็มเมื่อ Re-compile',
           revealed: true,
           visited: true,
           enemy: null,
@@ -112,7 +98,7 @@ export function createInitialGameState(selectedHeroIds = ['int', 'pointer']) {
       playerNumber: index + 1,
       hp: base.maxHp,
       focus: base.maxFocus,
-      position: [6, 6], // Starts at Boot Sector
+      position: [3, 3], // Starts at center Boot Sector [3, 3]
       actionsLeft: 2,
       maxActions: 2,
       status: 'alive', // 'alive', 'crashed', 'stunned'
@@ -139,8 +125,10 @@ export function createInitialGameState(selectedHeroIds = ['int', 'pointer']) {
     bugCount: 0,
     maxBugsAllowed: 10,
     permissionKeys: 0,
-    keysRequired: Math.max(1, selectedHeroIds.length),
+    keysRequired: 4, // Defeat 4 Minibosses to spawn Boss Portal
+    bossSpawned: false,
     bossUnlocked: false,
+    bossPosition: null,
     bossActive: false,
     currentBoss: JSON.parse(JSON.stringify(randomBoss)),
     players,
@@ -154,11 +142,13 @@ export function createInitialGameState(selectedHeroIds = ['int', 'pointer']) {
     lastDiceRoll: null, // { dice: [], sum: 0, success: true/false }
     logs: [
       `[INIT] C-Code: The Compiler's Dungeon เริ่มการทำงาน...`,
-      `[SETUP] ผู้เล่นทุกคน Spawn ที่ The Boot Sector (0x0000)`,
+      `[SETUP] ผู้เล่นทุกคน Spawn ที่จุดเกิดใจกลางแผนที่ The Boot Sector [3, 3]`,
+      `[MISSION] ปราบ Mini Boss ให้ครบ 4 ตัว เพื่อเปิดประตูสู่ห้อง Boss ใหญ่แบบสุ่ม!`,
       `[CLOCK] Compiler Clock ตั้งไว้ที่ 6 รอบการทำงาน`,
     ],
   }
 }
+
 
 // Save & Load
 export function saveGame(state) {
@@ -216,28 +206,34 @@ export function movePlayerAction(state, targetRow, targetCol) {
   }
 
   const [curR, curC] = player.position
-  const dist = Math.abs(curR - targetRow) + Math.abs(curC - targetCol)
+  const dRow = Math.abs(curR - targetRow)
+  const dCol = Math.abs(curC - targetCol)
 
-  // Max move is 2 (or 3 with Git Push Boots)
-  const hasGitBoots = player.inventoryLoot.some(i => i.id === 'loot_6')
-  const maxDist = hasGitBoots ? 3 : 2
-
-  if (dist > maxDist) {
-    addLog(state, `⚠️ ระยะเดินไกลเกินไป (เดินได้สูงสุด ${maxDist} ช่อง)`)
+  // Move 1 step around oneself (adjacent: up, down, left, right, or diagonal)
+  if (dRow > 1 || dCol > 1 || (dRow === 0 && dCol === 0)) {
+    addLog(state, `⚠️ สามารถเดินได้ทีละ 1 ช่องรอบตัวเท่านั้น`)
     return state
   }
 
-  // Deduct action
+  // Deduct 1 action per 1-tile step
   player.actionsLeft -= 1
   player.position = [targetRow, targetCol]
 
   const tile = state.board[targetRow][targetCol]
+  const wasRevealed = tile.revealed
   tile.revealed = true
   tile.visited = true
 
-  addLog(state, `🏃 ${player.name} เคลื่อนที่ไปยัง [${targetRow}, ${targetCol}] - ${tile.name}`)
+  // If tile was already revealed and is NOT the boss room, walk freely without event
+  if (wasRevealed && tile.type !== 'boss') {
+    addLog(state, `🏃 ${player.name} ก้าวไปยัง [${targetRow}, ${targetCol}] - ${tile.name} (เหลือ ${player.actionsLeft} Action)`)
+    saveGame(state)
+    return { ...state }
+  }
 
-  // Check tile events
+  addLog(state, `🏃 ${player.name} สำรวจช่องใหม่ [${targetRow}, ${targetCol}] - ${tile.name} (เหลือ ${player.actionsLeft} Action)`)
+
+  // First time entering this tile — Check tile events
   if (tile.type === 'trap') {
     const trap = TRAPS_DATA[tile.trapType]
     state.activeTrap = { trap, playerIndex: state.activePlayerIndex }
@@ -256,13 +252,9 @@ export function movePlayerAction(state, targetRow, targetCol) {
     state.activeCombat = { enemy: tile.enemy, type: 'miniboss', playerIndex: state.activePlayerIndex }
     addLog(state, `⚔️ เผชิญหน้ามินิบอส Runtime Warden! ${miniboss.name} ป้องกันทางผ่านสู่ Kernel!`)
   } else if (tile.type === 'boss') {
-    if (!state.bossUnlocked) {
-      addLog(state, `🔒 CPU Core ถูกล็อค! ต้องการ Permission Key ${state.keysRequired} ดอก (มีอยู่ ${state.permissionKeys}/${state.keysRequired})`)
-    } else {
-      state.bossActive = true
-      state.activeCombat = { enemy: state.currentBoss, type: 'boss', playerIndex: state.activePlayerIndex }
-      addLog(state, `💥 เข้าสู่ห้องบอสใหญ่! ${state.currentBoss.name} ปรากฏตัว! Overclock ทำงาน: Compiler Clock จะลดเร็วขึ้น!`)
-    }
+    state.bossActive = true
+    state.activeCombat = { enemy: state.currentBoss, type: 'boss', playerIndex: state.activePlayerIndex }
+    addLog(state, `💥 เข้าสู่ห้องบอสใหญ่! ${state.currentBoss.name} ปรากฏตัว! Overclock ทำงาน: Compiler Clock จะลดเร็วขึ้น!`)
   }
 
   saveGame(state)
@@ -270,7 +262,7 @@ export function movePlayerAction(state, targetRow, targetCol) {
 }
 
 // Resolve Trap
-// choice: 'code_correct' | 'code_wrong'
+// choice: 'code_correct' | 'code_wrong' | 'code_fatal'
 export function resolveTrapAction(state, choice = 'code_correct') {
   if (!state.activeTrap) return state
   const { trap, playerIndex } = state.activeTrap
@@ -279,35 +271,18 @@ export function resolveTrapAction(state, choice = 'code_correct') {
   if (choice === 'code_correct') {
     addLog(state, `✅ ${player.name} แก้ไขโค้ดได้สำเร็จ! หลุดออกจากกับดัก ${trap.name} โดยไม่เสียอะไร!`)
     state.activeTrap = null
-  } else {
-    // code_wrong — apply trap penalty
-    addLog(state, `❌ ${player.name} พิมพ์โค้ดผิด! ติดกับดัก ${trap.name}!`)
-
-    if (trap.id === 'infinite_loop') {
-      if (player.id === 'pointer' && player.focus >= 1) {
-        player.focus -= 1
-        addLog(state, `⚡ Pointer Assassin ใช้สกิล Reference Jump (จ่าย 1 Focus) วาร์ปหนีออกจากกับดัก!`)
-      } else {
-        player.focus = Math.max(0, player.focus - trap.penaltyFocus)
-        addLog(state, `💀 Infinite Loop ล็อคระบบ! เสีย ${trap.penaltyFocus} Focus`)
-      }
-    } else if (trap.id === 'logic_bomb') {
-      const dmg = trap.penaltyDmg || 2
-      player.hp = Math.max(0, player.hp - dmg)
-      addLog(state, `💣 Logic Bomb ระเบิด! ${player.name} โดนดาเมจ ${dmg} HP (เหลือ ${player.hp}/${player.maxHp})`)
-      if (player.hp === 0) handleSystemCrash(state, player)
-    } else if (trap.id === 'voltage_spike') {
-      if (player.id === 'int' && player.focus >= 2) {
-        player.focus -= 2
-        addLog(state, `🛡️ Int Crusader ใช้ Static Protection (จ่าย 2 Focus) ป้องกันการสูญเสีย Max HP!`)
-      } else {
-        player.maxHp = Math.max(1, player.maxHp - 1)
-        player.hp = Math.min(player.hp, player.maxHp)
-        addLog(state, `⚡ Hardware Failure! ${player.name} สูญเสีย 1 Max HP ถาวร!`)
-      }
-    }
-
+  } else if (choice === 'code_fatal') {
+    player.hp = 0
+    handleSystemCrash(state, player)
+    addLog(state, `💀 ${player.name} แก้กับดักผิดครบ 3 ครั้ง! เกิด System Crash ตัวละครดับลง`)
     state.activeTrap = null
+
+    if (state.gameStatus !== 'gameover') {
+      endTurnAction(state)
+    }
+  } else {
+    // code_wrong (< 3 attempts)
+    addLog(state, `⚠️ ${player.name} แก้ไขกับดักผิดพลาด (Compile Error)! พยายามใหม่อีกครั้ง`)
   }
 
   saveGame(state)
@@ -407,8 +382,9 @@ export function restAction(state, choice = 'hp') {
 export function recompileAction(state) {
   const player = state.players[state.activePlayerIndex]
   const [r, c] = player.position
-  if (r !== 6 || c !== 6) {
-    addLog(state, `⚠️ ต้องอยู่ที่ The Boot Sector (0x0000) เท่านั้นเพื่อ Re-compile`)
+  const currentTile = state.board[r][c]
+  if (currentTile.type !== 'entrance' && (r !== 3 || c !== 3)) {
+    addLog(state, `⚠️ ต้องอยู่ที่ The Boot Sector [3, 3] เท่านั้นเพื่อ Re-compile`)
     return state
   }
   if (player.actionsLeft <= 0) {
@@ -439,13 +415,13 @@ export function hardResetAction(state) {
   player.hp = Math.floor(player.maxHp / 2)
   player.focus = Math.min(player.maxFocus, 2)
 
-  addLog(state, `🔄 ${player.name} ทำ Hard Reset Reboot ด้วยตนเอง! ฟื้นฟู HP กลับมา ${player.hp} และ Focus 2 หน่วย`)
+  addLog(state, `🔄 ${player.name} ทำ Hard Reset Reboot ฟื้นคืนชีพตามกฎสำเร็จ! (ฟื้น HP เป็น ${player.hp}/${player.maxHp} และ Focus 2 หน่วย) — สิ้นสุดการ Reboot ในเทิร์นนี้`)
   saveGame(state)
   return { ...state }
 }
 
 // Debug / Attack Combat
-// mode: 'code_correct' | 'code_wrong'
+// mode: 'code_correct' | 'code_wrong' | 'code_fatal'
 export function debugEnemyAction(state, mode = 'code_correct') {
   if (!state.activeCombat) return state
   const { enemy, type } = state.activeCombat
@@ -460,16 +436,30 @@ export function debugEnemyAction(state, mode = 'code_correct') {
     addLog(state, `✅ ${player.name} แก้ไขโค้ดได้สำเร็จ${isExpert ? ' (Expert สายตรง!)' : ''}! กำจัด ${enemy.name} สำเร็จ!`)
     defeatEnemy(state, enemy, type)
 
+  } else if (mode === 'code_fatal') {
+    // Player failed 3 times — Fatal System Crash
+    player.hp = 0
+    handleSystemCrash(state, player)
+    addLog(state, `💀 ${player.name} พิมพ์โค้ดผิดครบ 3 ครั้ง! เกิด System Crash ตัวละครดับลงและหลุดจากการต่อสู้`)
+    state.activeCombat = null
+
+    if (state.gameStatus !== 'gameover') {
+      endTurnAction(state)
+    }
+
   } else if (mode === 'code_wrong') {
-    // Player typed wrong code — apply penalty
+    // Player typed wrong code (< 3 attempts) — apply warning & minor penalty
     const penaltyDmg = enemy.penaltyDmg || 1
     player.hp = Math.max(0, player.hp - penaltyDmg)
-    addLog(state, `❌ ${player.name} พิมพ์โค้ดผิด! Compile Error! โดนดาเมจสะท้อนกลับ ${penaltyDmg} HP (เหลือ ${player.hp}/${player.maxHp})`)
+    addLog(state, `❌ ${player.name} พิมพ์โค้ดผิด! Compile Error! โดนดาเมจสะท้อน ${penaltyDmg} HP (เหลือ ${player.hp}/${player.maxHp})`)
 
-    if (player.hp === 0) handleSystemCrash(state, player)
-
-    // Combat stays open — player must try again
-    // (activeCombat remains set, modal stays open)
+    if (player.hp === 0) {
+      handleSystemCrash(state, player)
+      state.activeCombat = null
+      if (state.gameStatus !== 'gameover') {
+        endTurnAction(state)
+      }
+    }
   }
 
   saveGame(state)
@@ -489,9 +479,40 @@ function defeatEnemy(state, enemy, type) {
   } else if (type === 'miniboss') {
     state.permissionKeys += 1
     addLog(state, `🏆 พิชิต Mini Boss ${enemy.name}! ได้รับ Permission Key 🔑 (${state.permissionKeys}/${state.keysRequired})`)
-    if (state.permissionKeys >= state.keysRequired) {
+
+    // When 4 Minibosses are cleared, randomly spawn the boss room on the map!
+    if (state.permissionKeys >= state.keysRequired && !state.bossSpawned) {
+      state.bossSpawned = true
       state.bossUnlocked = true
-      addLog(state, `🔓 ปลดล็อคห้อง CPU Core สำเร็จ! ประตูสู่ห้องบอสใหญ่ตรงกลางเปิดออกแล้ว!`)
+
+      // Find valid candidate tiles
+      const candidates = []
+      for (let cr = 0; cr < 7; cr++) {
+        for (let cc = 0; cc < 7; cc++) {
+          if (cr === 3 && cc === 3) continue // Not spawn
+          const hasPlayer = state.players.some(p => p.position[0] === cr && p.position[1] === cc)
+          if (hasPlayer) continue
+          const t = state.board[cr][cc]
+          if (t.type !== 'entrance') {
+            candidates.push({ r: cr, c: cc })
+          }
+        }
+      }
+
+      const pick = candidates[Math.floor(Math.random() * candidates.length)]
+      if (pick) {
+        state.bossPosition = [pick.r, pick.c]
+        const bossTile = state.board[pick.r][pick.c]
+        bossTile.type = 'boss'
+        bossTile.name = `The CPU Core — ${state.currentBoss.name}`
+        bossTile.desc = `ห้องบอสใหญ่ ${state.currentBoss.name}! เข้าไปเพื่อเริ่มการต่อสู้ Final Boss`
+        bossTile.revealed = true
+        bossTile.enemy = JSON.parse(JSON.stringify(state.currentBoss))
+
+        addLog(state, `🎉 ปราบ Mini Boss ครบ 4 ตัวแล้ว! ได้รับ Key ครบ 4 ดอก!`)
+        addLog(state, `🌀 [PORTAL OPEN] ประตูห้องบอสใหญ่ (CPU Core) สุ่มปรากฏขึ้นแล้วที่พิกัด [${pick.r}, ${pick.c}]!`)
+        addLog(state, `👑 เคลื่อนที่ไปยังพิกัด [${pick.r}, ${pick.c}] เพื่อเริ่มศึกตัดสินกับ ${state.currentBoss.name}!`)
+      }
     }
   } else if (type === 'boss') {
     state.gameStatus = 'victory'

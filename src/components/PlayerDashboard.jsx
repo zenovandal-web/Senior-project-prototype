@@ -13,9 +13,9 @@ export default function PlayerDashboard({
   const player = state.players[state.activePlayerIndex]
   if (!player) return null
 
-  const isBootSector = player.position[0] === 6 && player.position[1] === 6
-  const currentTile = state.board[player.position[0]][player.position[1]]
-  const isLootRoom = currentTile.type === 'loot' && !currentTile.looted
+  const currentTile = state.board?.[player.position[0]]?.[player.position[1]]
+  const isBootSector = currentTile?.type === 'entrance' || (player.position[0] === 3 && player.position[1] === 3)
+  const isLootRoom = currentTile?.type === 'loot' && !currentTile?.looted
 
   return (
     <div className="player-dashboard">
@@ -43,10 +43,32 @@ export default function PlayerDashboard({
           </div>
         </div>
 
-        <button className="btn btn-end-turn" onClick={onEndTurn}>
+        <button
+          className={`btn btn-end-turn ${player.actionsLeft === 0 ? 'pulse-btn' : ''}`}
+          onClick={onEndTurn}
+        >
           จบเทิร์น (End Turn) ⏩
         </button>
       </div>
+
+      {/* System Crash Revival Banner */}
+      {player.status === 'crashed' && (
+        <div className="system-crash-banner">
+          <div className="crash-banner-header">
+            <span className="crash-icon">🚨</span>
+            <div>
+              <div className="crash-title">SYSTEM CRASH! (เครื่องดับ)</div>
+              <div className="crash-sub">ตัวละคร {player.name} พลังชีวิตหมด / เขียนโค้ดผิดพลาด</div>
+            </div>
+          </div>
+          <p className="crash-guide">
+            <strong>ตามกฎการฟื้นคืนชีพ:</strong> ในเทิร์นของคุณ สามารถใช้ทั้ง 2 Actions เพื่อทำ <strong>Hard Reset Reboot</strong> เพื่อฟื้นคืนชีพกลับมาเล่นได้อีกครั้ง
+          </p>
+          <button className="btn btn-reboot-big" onClick={onHardReset}>
+            ⚡ กดใช้การเกิดตามกฎ (Hard Reset Reboot — ฟื้น {Math.floor(player.maxHp / 2)} HP &amp; 2 Focus)
+          </button>
+        </div>
+      )}
 
       {/* Stats Bar */}
       <div className="dashboard-stats-grid">

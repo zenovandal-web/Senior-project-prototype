@@ -38,7 +38,9 @@ export default function App() {
     if (saved && saved.players && saved.board) {
       const activeP = saved.players[saved.activePlayerIndex]
       const combatStuck = saved.activeCombat && activeP && activeP.actionsLeft <= 0
-      if (!combatStuck) return saved
+      // If previous save had boss at center [3, 3] instead of Boot Sector, reset to new center spawn layout
+      const isOldLayout = saved.board[3] && saved.board[3][3] && saved.board[3][3].type === 'boss'
+      if (!combatStuck && !isOldLayout) return saved
     }
     return createInitialGameState(['int', 'pointer', 'const', 'recursive'])
   })

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { validateEnemyCode } from '../game/codeValidator'
 
 export default function CombatModal({ activeCombat, player, onDebug }) {
   const [userCode, setUserCode] = useState('')
-  const [result, setResult] = useState(null) // null | 'correct' | 'wrong'
+  const [result, setResult] = useState(null) // null | 'correct' | 'wrong' | 'fatal'
   const [shake, setShake] = useState(false)
   const [hintVisible, setHintVisible] = useState(false)
   const [attempts, setAttempts] = useState(0)
@@ -21,49 +22,30 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
   if (!activeCombat) return null
   const { enemy, type } = activeCombat
 
-  // Normalize code for comparison (strip comments & whitespace)
-  function normalize(str) {
-    return str
-      .replace(/\/\/.*/g, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-  }
-
-  function checkAnswer() {
-    const solution = enemy.solution || ''
-    const userNorm = normalize(userCode)
-    const solNorm = normalize(solution)
-
-    // Extract key tokens from solution (skip short keywords)
-    const skipWords = new Set(['int','char','void','return','if','for','while','else','do','struct','typedef','include','define','null','new','true','false','the','a'])
-    const keyTokens = solNorm
-      .split(/[\s;,(){}[\]<>*&=!+\-/%#"'\\]+/)
-      .filter(t => t.length > 1 && !skipWords.has(t))
-
-    if (keyTokens.length === 0) return userNorm.length >= 3
-
-    const matchCount = keyTokens.filter(token => userNorm.includes(token)).length
-    const matchRatio = matchCount / keyTokens.length
-
-    // Need 60%+ match of key tokens
-    return matchRatio >= 0.6 && userNorm.length >= Math.max(3, solNorm.length * 0.25)
-  }
-
   function handleSubmit() {
-    if (!userCode.trim() || result === 'correct') return
-    const correct = checkAnswer()
-    setAttempts(a => a + 1)
+    if (!userCode.trim() || result === 'correct' || result === 'fatal') return
+    const correct = validateEnemyCode(enemy, userCode)
 
     if (correct) {
       setResult('correct')
       setTimeout(() => onDebug('code_correct'), 1200)
     } else {
-      setResult('wrong')
-      setShake(true)
-      setTimeout(() => { setShake(false); setResult(null) }, 900)
-      setTimeout(() => onDebug('code_wrong'), 950)
+      const nextAttempts = attempts + 1
+      setAttempts(nextAttempts)
+
+      if (nextAttempts >= 3) {
+        setResult('fatal')
+        setShake(true)
+        setTimeout(() => setShake(false), 800)
+        setTimeout(() => {
+          onDebug('code_fatal')
+        }, 1500)
+      } else {
+        setResult('wrong')
+        setShake(true)
+        setTimeout(() => { setShake(false); setResult(null) }, 900)
+        setTimeout(() => onDebug('code_wrong'), 950)
+      }
     }
   }
 
@@ -149,7 +131,7 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
           <div className="code-challenge-right">
             <div className="code-challenge-label">🟢 พิมพ์โค้ดแก้ไขที่นี่ (fix.c)</div>
 
-            <div className={`code-editor-wrapper ${result === 'correct' ? 'editor-correct' : result === 'wrong' ? 'editor-wrong' : ''}`}>
+            <div className={`code-editor-wrapper ${result === 'correct' ? 'editor-correct' : (result === 'wrong' || result === 'fatal') ? 'editor-wrong' : ''}`}>
               <div className="code-editor-topbar">
                 <span className="dot red" /><span className="dot yellow" /><span className="dot green" />
                 <span className="code-title">fix.c &nbsp;·&nbsp; Ctrl+Enter = Submit</span>
@@ -164,7 +146,7 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
                   ref={textareaRef}
                   className="code-textarea"
                   value={userCode}
-                  onChange={e => { setUserCode(e.target.value); setResult(null) }}
+                  onChange={e => { if (result !== 'fatal') { setUserCode(e.target.value); setResult(null); } }}
                   onKeyDown={handleKeyDown}
                   placeholder={'// พิมพ์โค้ดที่แก้ไขแล้วที่นี่\n// Tab = เว้นวรรค · Ctrl+Enter = Submit'}
                   spellCheck={false}
@@ -172,6 +154,7 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
                   autoCorrect="off"
                   autoCapitalize="off"
                   rows={9}
+                  disabled={result === 'fatal'}
                 />
               </div>
             </div>
@@ -183,19 +166,24 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
             )}
             {result === 'wrong' && (
               <div className="result-banner result-wrong">
-                ❌ Compile Error! โค้ดผิดพลาด — โดนบทลงโทษ!
+                ❌ Compile Error! โค้ดผิดพลาด (ครั้งที่ {attempts}/3) — โดนบทลงโทษ!
+              </div>
+            )}
+            {result === 'fatal' && (
+              <div className="result-banner result-fatal">
+                💀 Compile Error ครบ 3 ครั้ง! SYSTEM CRASH! {player.name} ดับลงและหลุดจากการต่อสู้...
               </div>
             )}
 
             <div className="attempts-tracker">
-              พยายามแล้ว: <span className={attempts >= 3 ? 'red-text' : 'yellow-text'}>{attempts} ครั้ง</span>
-              {attempts >= 2 && <span style={{ marginLeft: '8px', color: 'var(--accent-cyan)' }}>← กด Hint ได้เลย!</span>}
+              พิมพ์ผิดแล้ว: <span className={attempts >= 2 ? 'red-text' : 'yellow-text'}>{attempts} / 3 ครั้ง</span>
+              {attempts >= 2 && <span style={{ marginLeft: '8px', color: 'var(--accent-cyan)' }}>← กด Hint ได้เลย! หากผิดอีก 1 ครั้งจะ System Crash ทันที</span>}
             </div>
 
             <button
               className="btn btn-submit-code"
               onClick={handleSubmit}
-              disabled={!userCode.trim() || result === 'correct'}
+              disabled={!userCode.trim() || result === 'correct' || result === 'fatal'}
             >
               <span>⚡</span>
               <div>
