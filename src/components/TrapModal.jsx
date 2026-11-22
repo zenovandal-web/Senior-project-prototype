@@ -26,7 +26,7 @@ const TRAP_CHALLENGES = {
   },
 }
 
-export default function TrapModal({ activeTrap, player, onResolveTrap }) {
+export default function TrapModal({ activeTrap, player, onResolveTrap, isSpectator = false }) {
   const [userCode, setUserCode] = useState('')
   const [result, setResult] = useState(null) // null | 'correct' | 'wrong'
   const [shake, setShake] = useState(false)
@@ -98,6 +98,11 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
       <div className={`combat-modal code-challenge-modal ${shake ? 'shake-modal' : ''}`}>
 
         <div className="combat-modal-header">
+          {isSpectator && (
+            <div className="spectator-overlay-notice">
+              👁️ โหมดรับชม: กำลังชม <strong>{player.name}</strong> แก้ไขกับดัก...
+            </div>
+          )}
           <div className="combat-badge-type trap-badge">🚨 TRAP TRIGGERED</div>
           <h2 className="combat-enemy-title">{trap.name}</h2>
           <div className="combat-enemy-sub">{trap.stat} Check — แก้ไขโค้ดเพื่อหลุดจากกับดัก!</div>
@@ -169,7 +174,7 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
                   autoCorrect="off"
                   autoCapitalize="off"
                   rows={9}
-                  disabled={result === 'fatal'}
+                  disabled={isSpectator || result === 'fatal'}
                 />
               </div>
             </div>
@@ -192,7 +197,7 @@ export default function TrapModal({ activeTrap, player, onResolveTrap }) {
             <button
               className="btn btn-submit-code"
               onClick={handleSubmit}
-              disabled={!userCode.trim() || result === 'correct' || result === 'fatal'}
+              disabled={isSpectator || !userCode.trim() || result === 'correct' || result === 'fatal'}
             >
               <span>⚡</span>
               <div>

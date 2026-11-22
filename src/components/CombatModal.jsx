@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { validateEnemyCode } from '../game/codeValidator'
 
-export default function CombatModal({ activeCombat, player, onDebug }) {
+export default function CombatModal({ activeCombat, player, onDebug, isSpectator = false }) {
   const [userCode, setUserCode] = useState('')
   const [result, setResult] = useState(null) // null | 'correct' | 'wrong' | 'fatal'
   const [shake, setShake] = useState(false)
@@ -77,6 +77,11 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
 
         {/* Header */}
         <div className="combat-modal-header">
+          {isSpectator && (
+            <div className="spectator-overlay-notice">
+              👁️ โหมดรับชม: กำลังชม <strong>{player.name}</strong> ต่อสู้และแก้บั๊ก...
+            </div>
+          )}
           <div className="combat-badge-type">{badgeLabel}</div>
           <h2 className="combat-enemy-title">{enemy.name}</h2>
           <div className="combat-enemy-sub">{enemy.type || enemy.sub}</div>
@@ -154,7 +159,7 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
                   autoCorrect="off"
                   autoCapitalize="off"
                   rows={9}
-                  disabled={result === 'fatal'}
+                  disabled={isSpectator || result === 'fatal'}
                 />
               </div>
             </div>
@@ -183,7 +188,7 @@ export default function CombatModal({ activeCombat, player, onDebug }) {
             <button
               className="btn btn-submit-code"
               onClick={handleSubmit}
-              disabled={!userCode.trim() || result === 'correct' || result === 'fatal'}
+              disabled={isSpectator || !userCode.trim() || result === 'correct' || result === 'fatal'}
             >
               <span>⚡</span>
               <div>

@@ -2,6 +2,7 @@ import React from 'react'
 
 export default function PlayerDashboard({
   state,
+  isMyTurn = true,
   onRest,
   onRecompile,
   onHardReset,
@@ -19,6 +20,22 @@ export default function PlayerDashboard({
 
   return (
     <div className="player-dashboard">
+      {!isMyTurn && (
+        <div style={{
+          background: 'rgba(255, 159, 67, 0.15)',
+          border: '1px solid #ff9f43',
+          color: '#ffd60a',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          marginBottom: '12px',
+          fontSize: '0.85rem',
+          textAlign: 'center',
+          fontFamily: 'var(--font-mono)'
+        }}>
+          ⏳ กำลังรอ {player.name} ตัดสินใจทำ Action...
+        </div>
+      )}
+
       {/* Top Banner: Turn & Status */}
       <div className="dashboard-header">
         <div className="active-player-badge" style={{ borderColor: player.color }}>
@@ -46,6 +63,7 @@ export default function PlayerDashboard({
         <button
           className={`btn btn-end-turn ${player.actionsLeft === 0 ? 'pulse-btn' : ''}`}
           onClick={onEndTurn}
+          disabled={!isMyTurn}
         >
           จบเทิร์น (End Turn) ⏩
         </button>
@@ -64,7 +82,7 @@ export default function PlayerDashboard({
           <p className="crash-guide">
             <strong>ตามกฎการฟื้นคืนชีพ:</strong> ในเทิร์นของคุณ สามารถใช้ทั้ง 2 Actions เพื่อทำ <strong>Hard Reset Reboot</strong> เพื่อฟื้นคืนชีพกลับมาเล่นได้อีกครั้ง
           </p>
-          <button className="btn btn-reboot-big" onClick={onHardReset}>
+          <button className="btn btn-reboot-big" onClick={onHardReset} disabled={!isMyTurn}>
             ⚡ กดใช้การเกิดตามกฎ (Hard Reset Reboot — ฟื้น {Math.floor(player.maxHp / 2)} HP &amp; 2 Focus)
           </button>
         </div>
@@ -114,7 +132,7 @@ export default function PlayerDashboard({
         <button
           className="btn btn-skill"
           onClick={onUseSkill}
-          disabled={player.focus < player.skillCost || player.status === 'crashed'}
+          disabled={!isMyTurn || player.focus < player.skillCost || player.status === 'crashed'}
           title={player.skillDesc}
         >
           <span>{player.skillIcon}</span>
@@ -129,7 +147,7 @@ export default function PlayerDashboard({
           <button
             className="btn btn-search"
             onClick={onSearch}
-            disabled={player.actionsLeft <= 0 || player.status === 'crashed'}
+            disabled={!isMyTurn || player.actionsLeft <= 0 || player.status === 'crashed'}
           >
             🔍 สำรวจกล่องสมบัติ (1 Action)
           </button>
@@ -140,7 +158,7 @@ export default function PlayerDashboard({
           <button
             className="btn btn-recompile"
             onClick={onRecompile}
-            disabled={player.actionsLeft <= 0}
+            disabled={!isMyTurn || player.actionsLeft <= 0}
           >
             🔄 Re-compile ฟื้นฟูเต็ม (1 Action)
           </button>
@@ -148,7 +166,7 @@ export default function PlayerDashboard({
 
         {/* Hard Reset if crashed */}
         {player.status === 'crashed' && (
-          <button className="btn btn-danger" onClick={onHardReset}>
+          <button className="btn btn-danger" onClick={onHardReset} disabled={!isMyTurn}>
             ⚡ Hard Reset Reboot (ใช้ 2 Actions)
           </button>
         )}
@@ -158,14 +176,14 @@ export default function PlayerDashboard({
           <button
             className="btn btn-secondary"
             onClick={() => onRest('hp')}
-            disabled={player.actionsLeft <= 0 || player.status === 'crashed' || currentTile.enemy}
+            disabled={!isMyTurn || player.actionsLeft <= 0 || player.status === 'crashed' || currentTile.enemy}
           >
             ☕ พักฟื้น +1 HP
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => onRest('focus')}
-            disabled={player.actionsLeft <= 0 || player.status === 'crashed' || currentTile.enemy}
+            disabled={!isMyTurn || player.actionsLeft <= 0 || player.status === 'crashed' || currentTile.enemy}
           >
             🧠 พักฟื้น +1 Focus
           </button>
