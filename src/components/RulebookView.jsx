@@ -59,7 +59,7 @@ export default function RulebookView({ onSelectPlayMode }) {
                 <li><span className="icon">🗺️</span><div><strong>สร้างแผนที่:</strong> วางไทล์คว่ำหน้าขนาด 7×7 โดยมี <code>Boot Sector</code> (ทางเข้า) อยู่ขอบ และ <code>CPU Core</code> (บอส) อยู่ตรงกลาง</div></li>
                 <li><span className="icon">🧑‍💻</span><div><strong>เตรียมตัวละคร:</strong> เลือก Hero — Int Crusader, Pointer Assassin, Const Archmage, Recursive Ranger — รับ HP/Focus เริ่มต้น วางหมากที่ Boot Sector</div></li>
                 <li><span className="icon">🃏</span><div><strong>กองการ์ด:</strong> แยกกอง Goblins (Bugs), Minions (Mini Boss), Loot, และ Header Files (Spells)</div></li>
-                <li><span className="icon">⏰</span><div><strong>Compiler Clock:</strong> ตั้งตัวนับเวลาเริ่มต้นไว้ที่เลข <strong className="highlight">6</strong></div></li>
+                <li><span className="icon">🛡️</span><div><strong>Stack Overflow Limit:</strong> บั๊กล้นระบบได้ไม่เกิน <strong className="highlight">10 ตัว</strong></div></li>
               </ul>
             </div>
           </div>
@@ -94,11 +94,10 @@ export default function RulebookView({ onSelectPlayMode }) {
 
                 <div className="phase-card phase-compiler">
                   <div className="phase-num">Phase 3</div>
-                  <div className="phase-name">Compiler / Enemy Phase (เฟสศัตรู)</div>
+                  <div className="phase-name">System / Enemy Phase (เฟสศัตรู)</div>
                   <div className="phase-actions">
-                    <div className="action-item">🕐 Compiler Clock: ลดตัวนับเวลาลง 1 ช่อง (2 ช่องเมื่อพบบอส)</div>
-                    <div className="action-item">👾 Enemy Move: ศัตรูในห้องจะโจมตีผู้เล่น</div>
-                    <div className="action-item">🐛 Spawn Bug: เมื่อตัวนับถึงจุด Bug จั่วก๊อบลินใหม่</div>
+                    <div className="action-item">👾 Enemy Attack: ศัตรูในห้องจะโจมตีผู้เล่น</div>
+                    <div className="action-item">🐛 Spawn Bug: เกิดบั๊กใหม่บนแผนที่ทุกๆ 2 รอบ</div>
                   </div>
                   <div className="phase-note">เกิดขึ้นหลังผู้เล่นทุกคนเล่นครบ (จบ 1 Round)</div>
                 </div>
@@ -115,17 +114,17 @@ export default function RulebookView({ onSelectPlayMode }) {
                 <div className="debug-card expert">
                   <div className="debug-label">ตรงสาย (Expert)</div>
                   <div className="debug-cost">จ่าย 1 Focus</div>
-                  <div className="debug-desc">แก้ไขจุดผิดได้ทันที 1 จุด (CP) สำเร็จ 100% ไม่ต้องทอยเต๋า</div>
+                  <div className="debug-desc">แก้ไขจุดผิดได้ทันที 1 จุด (CP) สำเร็จ 100% พร้อมรับโบนัส Focus</div>
                 </div>
                 <div className="debug-card novice">
                   <div className="debug-label">ไม่ตรงสาย (Novice)</div>
-                  <div className="debug-cost">ต้องทอยลูกเต๋า</div>
-                  <div className="debug-desc">ให้ได้แต้มตามความยากของศัตรูตัวนั้น เสี่ยงโดนดาเมจสวนกลับ</div>
+                  <div className="debug-cost">Code Challenge</div>
+                  <div className="debug-desc">แก้ไขโค้ดภาษา C ให้ถูกต้อง หากพิมพ์ผิดครบ 3 ครั้งจะเกิด System Crash</div>
                 </div>
                 <div className="debug-card shared">
                   <div className="debug-label">The Shared Memory (การช่วยเพื่อน)</div>
                   <div className="debug-cost">จ่าย 1 Focus</div>
-                  <div className="debug-desc">หากอยู่ห้องติดกัน สามารถส่งไอเทมหรือช่วยบัฟแต้มทอยเต๋าให้เพื่อนได้ +1</div>
+                  <div className="debug-desc">หากอยู่ห้องติดกัน สามารถส่งไอเทมหรือช่วยให้คำใบ้แก่เพื่อนได้</div>
                 </div>
               </div>
             </div>
@@ -139,9 +138,9 @@ export default function RulebookView({ onSelectPlayMode }) {
               <div className="boss-unlock-steps">
                 <div className="unlock-step"><span className="step-icon">🗡️</span><div>กำจัด Mini Boss ในห้อง Gateway เพื่อรับ <code>Permission Key</code></div></div>
                 <div className="unlock-arrow">→</div>
-                <div className="unlock-step"><span className="step-icon">🔑</span><div>รวบรวม Key ให้ครบตามจำนวนผู้เล่นในปาร์ตี้</div></div>
+                <div className="unlock-step"><span className="step-icon">🔑</span><div>รวบรวม Key ให้ครบตามจำนวนที่กำหนด</div></div>
                 <div className="unlock-arrow">→</div>
-                <div className="unlock-step"><span className="step-icon">🚪</span><div>ห้องบอสตรงกลางเปิดออก! Overclock ทำงาน: Clock จะลดเร็วขึ้น 2 ช่อง/รอบ</div></div>
+                <div className="unlock-step"><span className="step-icon">🚪</span><div>ห้องบอสตรงกลางเปิดออก! บอสหลักตื่นขึ้นพร้อมเข้าสู่การต่อสู้ชี้ชะตา</div></div>
               </div>
             </div>
           </div>
@@ -162,7 +161,6 @@ export default function RulebookView({ onSelectPlayMode }) {
                   <div className="result-title"><code>Segmentation Fault</code> — ความพ่ายแพ้</div>
                   <ul className="result-list">
                     <li>System Crash: ผู้เล่นทุกคน HP หมด (เครื่องดับทุกคน)</li>
-                    <li>Timeout Error: Compiler Clock ลดลงจนถึง 0 (หมดเวลาประมวลผล)</li>
                     <li>Stack Overflow: ก๊อบลิน (Bugs) โผล่มาบนกระดานจนล้นเกิน 10 ตัว</li>
                   </ul>
                 </div>

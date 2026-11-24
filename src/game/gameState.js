@@ -121,7 +121,6 @@ export function createInitialGameState(selectedHeroIds = ['int', 'pointer']) {
     round: 1,
     activePlayerIndex: 0,
     currentPhase: 1, // 1: Action, 2: Power, 3: Compiler
-    compilerClock: 6,
     bugCount: 0,
     maxBugsAllowed: 10,
     permissionKeys: 0,
@@ -139,12 +138,10 @@ export function createInitialGameState(selectedHeroIds = ['int', 'pointer']) {
     minibossDeck: shuffle([...MINIBOSSES_DATA]),
     activeCombat: null, // { enemy, type: 'goblin'|'miniboss'|'boss', playerIndex }
     activeTrap: null,   // { trapData, playerIndex }
-    lastDiceRoll: null, // { dice: [], sum: 0, success: true/false }
     logs: [
       `[INIT] C-Code: The Compiler's Dungeon เริ่มการทำงาน...`,
       `[SETUP] ผู้เล่นทุกคน Spawn ที่จุดเกิดใจกลางแผนที่ The Boot Sector [3, 3]`,
       `[MISSION] ปราบ Mini Boss ให้ครบ 4 ตัว เพื่อเปิดประตูสู่ห้อง Boss ใหญ่แบบสุ่ม!`,
-      `[CLOCK] Compiler Clock ตั้งไว้ที่ 6 รอบการทำงาน`,
     ],
   }
 }
@@ -182,15 +179,6 @@ export function addLog(state, message) {
   const time = new Date().toLocaleTimeString('th-TH', { hour12: false })
   state.logs.unshift(`[${time}] ${message}`)
   if (state.logs.length > 50) state.logs.pop()
-}
-
-// Dice Roll Simulator
-export function rollDice(count = 1) {
-  const dice = []
-  for (let i = 0; i < count; i++) {
-    dice.push(Math.floor(Math.random() * 6) + 1)
-  }
-  return dice
 }
 
 // Move Player Logic
@@ -541,14 +529,14 @@ export function castSpellAction(state, spellId) {
   } else if (spell.id === 'spell_3') { // math.h (Power Up 2x dmg)
     player.mathPowerUp = true
     addLog(state, `💥 ร่าย ${spell.name}: เพิ่มพลังโจมตี 2 เท่าในการโจมตีครั้งถัดไป!`)
-  } else if (spell.id === 'spell_5') { // time.h (Delay clock)
-    state.compilerClock = Math.min(10, state.compilerClock + 1)
-    addLog(state, `⏸️ ร่าย ${spell.name}: ชะลอเวลา Compiler Clock +1 ช่อง!`)
+  } else if (spell.id === 'spell_5') { // time.h (Extra Actions)
+    player.actionsLeft += 2
+    addLog(state, `⏸️ ร่าย ${spell.name}: ย้อนเวลาการประมวลผล ได้รับเพิ่ม +2 Actions ทันที!`)
   } else if (spell.id === 'spell_8') { // assert.h (Force quit goblin)
     const [r, c] = player.position
     const tile = state.board[r][c]
     if (tile.enemy && tile.type === 'goblin') {
-      addLog(state, `💣 ร่าย ${spell.name}: ทำลายล้างบั๊ก ${tile.enemy.name} ทันทีโดยไม่ต้องทอยเต๋า!`)
+      addLog(state, `💣 ร่าย ${spell.name}: ทำลายล้างบั๊ก ${tile.enemy.name} ทันที!`)
       defeatEnemy(state, tile.enemy, 'goblin')
     } else {
       addLog(state, `💣 ร่าย ${spell.name}: บังคับปิดกระบวนการทำงาน`)
@@ -591,7 +579,7 @@ export function useHeroSkillAction(state) {
     addLog(state, `⚡ Pointer Assassin ปลดปล่อยสกิล [Direct Reference]! ชี้ Address ไปยังห้องข้างเคียง`)
   } else if (player.id === 'const') {
     // Constant Definition
-    addLog(state, `🔒 Const Archmage ใช้สกิล [Constant Definition]! ล็อคแต้มเต๋าแห่งความเสถียรสำหรับเทิร์นหน้า`)
+    addLog(state, `🔒 Const Archmage ใช้สกิล [Constant Definition]! เสริมความเสถียรป้องกันระบบ`)
   } else if (player.id === 'recursive') {
     // Function Call
     player.actionsLeft += 1
@@ -612,25 +600,14 @@ export function endTurnAction(state) {
   state.activePlayerIndex = nextIdx
 
   if (nextIdx === 0) {
-    // Phase 3: Compiler Phase
+    // End of full round
     state.round += 1
-    const clockDec = state.bossActive ? 2 : 1
-    state.compilerClock = Math.max(0, state.compilerClock - clockDec)
-    addLog(state, `⏰ [Compiler Phase] สิ้นสุดรอบที่ ${state.round - 1}! Compiler Clock ลดลง ${clockDec} ช่อง (เหลือ: ${state.compilerClock})`)
+    addLog(state, `🔄 สิ้นสุดรอบที่ ${state.round - 1}! กำลังเริ่มต้นรอบที่ ${state.round}`)
 
-    // Check Timeout Error
-    if (state.compilerClock <= 0) {
-      state.gameStatus = 'gameover'
-      state.gameOverReason = 'Timeout Error! เวลาของ Compiler Clock หมดลง โปรแกรมค้างการประมวลผล'
-      addLog(state, `💀 GAME OVER: Timeout Error! Compiler หมดเวลาทำงาน`)
-      saveGame(state)
-      return { ...state }
-    }
-
-    // Spawn Bug event if clock hits 4 or 2
-    if (state.compilerClock === 4 || state.compilerClock === 2) {
+    // Spawn Bug event every 2 rounds
+    if (state.round % 2 === 0) {
       state.bugCount += 1
-      addLog(state, `🐛 [Compiler Alert] บั๊กตัวใหม่ Spawn ลงบนแผนที่! (บั๊กทั้งหมด: ${state.bugCount}/${state.maxBugsAllowed})`)
+      addLog(state, `🐛 [System Alert] บั๊กตัวใหม่ Spawn ลงบนแผนที่! (บั๊กทั้งหมด: ${state.bugCount}/${state.maxBugsAllowed})`)
       if (state.bugCount > state.maxBugsAllowed) {
         state.gameStatus = 'gameover'
         state.gameOverReason = 'Stack Overflow! บั๊กและก๊อบลินล้นระบบเกินขีดจำกัด'

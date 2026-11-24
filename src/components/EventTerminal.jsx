@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 
-export default function EventTerminal({ logs, compilerClock, bugCount, maxBugs, keys, keysRequired, onNewGame }) {
+export default function EventTerminal({ logs, bugCount, maxBugs, keys, keysRequired, onNewGame }) {
   const terminalRef = useRef(null)
 
   useEffect(() => {
@@ -13,11 +13,6 @@ export default function EventTerminal({ logs, compilerClock, bugCount, maxBugs, 
     <div className="event-terminal-container">
       {/* Status Bar */}
       <div className="terminal-status-header">
-        <div className="gauge-item">
-          <span className="gauge-label">⏰ COMPILER CLOCK</span>
-          <span className={`gauge-value ${compilerClock <= 2 ? 'crit-pulse' : ''}`}>{compilerClock} / 6</span>
-        </div>
-
         <div className="gauge-item">
           <span className="gauge-label">🐛 STACK OVERFLOW GAUGE</span>
           <span className="gauge-value">{bugCount} / {maxBugs} Bugs</span>

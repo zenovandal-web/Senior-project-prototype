@@ -27,10 +27,12 @@ import TrapModal from './components/TrapModal'
 import EventTerminal from './components/EventTerminal'
 import RulebookView from './components/RulebookView'
 import OnlineLobbyView from './components/OnlineLobbyView'
+import SinglePlayerSetup from './components/SinglePlayerSetup'
 import { socket } from './services/socket'
 
 export default function App() {
-  const [viewMode, setViewMode] = useState('lobby') // 'lobby' | 'play' | 'rulebook'
+  const [gameMode, setGameMode] = useState('single') // 'single' | 'multiplayer'
+  const [viewMode, setViewMode] = useState('play') // 'play' | 'single_setup' | 'lobby' | 'rulebook'
   const [multiplayerRoom, setMultiplayerRoom] = useState(null)
 
   // Initialize or load game state
@@ -190,6 +192,15 @@ export default function App() {
     })
   }
 
+  const handleStartSinglePlayerGame = (heroIds) => {
+    clearGameSave()
+    const freshState = createInitialGameState(heroIds)
+    setGameState(freshState)
+    setMultiplayerRoom(null)
+    setGameMode('single')
+    setViewMode('play')
+  }
+
   const handleNewGame = () => {
     if (multiplayerRoom) {
       const isHost = multiplayerRoom.hostId === socket.id
@@ -217,7 +228,8 @@ export default function App() {
     } else {
       if (window.confirm('คุณต้องการเริ่มเกมใหม่หรือไม่? ข้อมูลที่บันทึกไว้จะถูกรีเซ็ต')) {
         clearGameSave()
-        const freshState = createInitialGameState(['int', 'pointer', 'const', 'recursive'])
+        const currentHeroes = gameState.players.map(p => p.id)
+        const freshState = createInitialGameState(currentHeroes.length > 0 ? currentHeroes : ['int', 'pointer', 'const', 'recursive'])
         setGameState(freshState)
       }
     }
@@ -237,16 +249,27 @@ export default function App() {
         {/* View Mode Switcher */}
         <div className="nav-links">
           <button
-            className={`nav-link ${viewMode === 'lobby' ? 'active' : ''}`}
-            onClick={() => setViewMode('lobby')}
+            className={`nav-link ${(gameMode === 'single' && (viewMode === 'play' || viewMode === 'single_setup')) ? 'active' : ''}`}
+            onClick={() => {
+              setGameMode('single')
+              setMultiplayerRoom(null)
+              setViewMode('play')
+            }}
           >
-            🌐 ห้องออนไลน์ (Online Lobby)
+            👤 เล่นคนเดียว (Single Player)
           </button>
           <button
-            className={`nav-link ${viewMode === 'play' ? 'active' : ''}`}
-            onClick={() => setViewMode('play')}
+            className={`nav-link ${(gameMode === 'multiplayer' || viewMode === 'lobby') ? 'active' : ''}`}
+            onClick={() => {
+              setGameMode('multiplayer')
+              if (!multiplayerRoom) {
+                setViewMode('lobby')
+              } else {
+                setViewMode('play')
+              }
+            }}
           >
-            🎮 กระดานเกม (Game Board)
+            🌐 เล่นออนไลน์ (Online Multiplayer)
           </button>
           <button
             className={`nav-link ${viewMode === 'rulebook' ? 'active' : ''}`}
@@ -258,7 +281,7 @@ export default function App() {
 
         {/* Live Status Indicators */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {multiplayerRoom && (
+          {multiplayerRoom ? (
             <div style={{
               background: 'rgba(0, 212, 255, 0.1)',
               border: '1px solid #00d4ff',
@@ -271,22 +294,75 @@ export default function App() {
             }}>
               ROOM: {multiplayerRoom.code}
             </div>
+          ) : (
+            <div style={{
+              background: 'rgba(0, 255, 136, 0.1)',
+              border: '1px solid #00ff88',
+              color: '#00ff88',
+              padding: '4px 10px',
+              borderRadius: 6,
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.8rem',
+              fontWeight: 700
+            }}>
+              MODE: SINGLE PLAYER
+            </div>
           )}
-          <div className="nav-clock">
-            <span className="clock-label">COMPILER CLOCK</span>
-            <span className="clock-value">{gameState.compilerClock}</span>
-          </div>
         </div>
       </nav>
 
       {/* Main Content Area */}
-      {viewMode === 'lobby' ? (
+      {viewMode === 'single_setup' ? (
+        <SinglePlayerSetup
+          onStartGame={handleStartSinglePlayerGame}
+          hasSavedGame={Boolean(loadGame())}
+          onContinueSaved={() => setViewMode('play')}
+        />
+      ) : viewMode === 'lobby' ? (
         <OnlineLobbyView
           onStartGame={handleStartMultiplayerGame}
-          onBackToSinglePlayer={() => setViewMode('play')}
+          onBackToSinglePlayer={() => {
+            setGameMode('single')
+            setMultiplayerRoom(null)
+            setViewMode('play')
+          }}
         />
       ) : viewMode === 'play' ? (
         <main className="play-view-container">
+          {/* Single Player Top Options Banner */}
+          {gameMode === 'single' && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(14, 18, 28, 0.85)',
+              border: '1px solid rgba(0, 212, 255, 0.25)',
+              borderRadius: '8px',
+              padding: '10px 18px',
+              marginBottom: '18px',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: '#00d4ff', fontWeight: 700, fontFamily: 'var(--font-title)' }}>
+                  👤 โหมดเล่นคนเดียว (Single Player)
+                </span>
+                <span style={{ color: '#8b9bb4', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
+                  · ปาร์ตี้ {gameState.players.length} ตัวละคร (รอบที่ {gameState.round})
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setViewMode('single_setup')}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  ⚙️ สลับตัวละคร / เริ่มเล่นรอบใหม่
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Multiplayer Live Status Banner */}
           {multiplayerRoom && (
             <div className="multiplayer-status-banner">
@@ -331,7 +407,6 @@ export default function App() {
               {/* Event / Compiler Log Terminal */}
               <EventTerminal
                 logs={gameState.logs}
-                compilerClock={gameState.compilerClock}
                 bugCount={gameState.bugCount}
                 maxBugs={gameState.maxBugsAllowed}
                 keys={gameState.permissionKeys}
@@ -419,7 +494,6 @@ export default function App() {
           <div className="footer-status">
             <span className="status-dot" />
             Backend Status: <span className="green-text">ONLINE &amp; ACTIVE</span>
-            &nbsp;|&nbsp; Compiler Clock: <span className="highlight">{gameState.compilerClock}</span>
             &nbsp;|&nbsp; Party: {gameState.players.length} Heroes
           </div>
         </div>
